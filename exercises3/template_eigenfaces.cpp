@@ -2,9 +2,10 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 
 using namespace Eigen;
+using namespace std;
 
 VectorXd load_pgm(const std::string &filename) {
 	// returns a picture as a flattened vector
@@ -49,6 +50,7 @@ int main() {
 
 	MatrixXd faces(h*w, M);
 	VectorXd meanFace(h*w);
+        MatrixXd A(h*w, M);
 	
 	// loads pictures as flattened vectors into faces
 	for (int i=0; i<M; i++) {
@@ -56,19 +58,32 @@ int main() {
 			std::to_string(i+1) + ".pgm";
 		VectorXd flatPic = load_pgm(filename);
 		faces.col(i) = flatPic;
+                A.col(i) = flatPic;
 		
-		// TODO: Point (b)
+                meanFace += flatPic;
 	}
+
+        meanFace /= M;
+
+        // Subtract mean from A
+        A.colwise() -= meanFace;
 
 	
 	// TODO: Point (e)
+        JacobiSVD<MatrixXd> svd(A, ComputeThinU | ComputeThinV);
+        MatrixXd U = svd.matrixU();
 
 	// try to recognize a test face
 	string testPicName = "./testPictures/subject01.happy.pgm";
 	VectorXd newFace = load_pgm(testPicName);
 
 	// TODO: Point (f)
+        VectorXd projNewFace = U.transpose() * (newFace - meanFace);
 	
 	// TODO: Point (g)
-
+        MatrixXd projFaces = U.transpose() * A;
+	int indexMinNorm;
+	(projFaces.colwise()-projNewFace).colwise().norm().minCoeff(&indexMinNorm);
+	cout << testPicName << " is identified as subject "
+		 << indexMinNorm+1 << endl;
 }
